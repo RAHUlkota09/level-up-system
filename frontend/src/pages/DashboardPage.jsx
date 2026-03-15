@@ -86,13 +86,13 @@ const DashboardPage = () => {
   const [stats, setStats] = useState(null);
   const [missions, setMissions] = useState([]);
   const [nutrition, setNutrition] = useState(null);
-  const [notifications, setNotifications] = useState([]);
   const [levelUpShow, setLevelUpShow] = useState(false);
   const [newLevel, setNewLevel] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchDashboardData = async () => {
@@ -106,11 +106,6 @@ const DashboardPage = () => {
       setStats(statsRes.data);
       setMissions(missionsRes.data.missions || []);
       setNutrition(nutritionRes.data);
-
-      // Build notifications from nutrition alerts
-      if (nutritionRes.data.systemAlert) {
-        setNotifications([nutritionRes.data.systemAlert]);
-      }
     } catch (error) {
       console.error('Dashboard load error:', error);
       // Use demo data if backend not available

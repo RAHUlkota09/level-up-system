@@ -55,7 +55,6 @@ const NutritionPage = () => {
   const [todayData, setTodayData] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [searching, setSearching] = useState(false);
   const [selectedFood, setSelectedFood] = useState(null);
   const [quantity, setQuantity] = useState(100);
   const [mealType, setMealType] = useState('lunch');
@@ -96,7 +95,6 @@ const NutritionPage = () => {
       setSearchResults([]);
       return;
     }
-    setSearching(true);
     try {
       const res = await nutritionAPI.searchFoods(query);
       setSearchResults(res.data.foods || []);
@@ -106,8 +104,6 @@ const NutritionPage = () => {
         f.name.toLowerCase().includes(query.toLowerCase())
       );
       setSearchResults(filtered.map(f => ({ name: f.name, per100g: { protein: 15, carbs: 10, fats: 5, calories: 150 } })));
-    } finally {
-      setSearching(false);
     }
   };
 
