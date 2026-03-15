@@ -1,0 +1,5 @@
+
+PORT=5000
+MONGODB_URI=mongodb://localhost:27017/levelupsystem
+JWT_SECRET=mysecretkey123456
+NODE_ENV=development
