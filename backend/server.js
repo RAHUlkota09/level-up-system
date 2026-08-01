@@ -13,20 +13,19 @@ dotenv.config();
 
 const app = express();
 
-// ---- MIDDLEWARE ----
 const allowedOrigins = [
   'http://localhost:3000',
-  'https://level-up-system9.vercel.app'
-];
+  'http://localhost:3001',
+  'https://level-up-system9.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
 
 // Allow requests from our React frontend
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
+      return callback(null, true);
     }
     return callback(null, true);
   },
@@ -57,8 +56,9 @@ app.get('/api/health', (req, res) => {
 // ---- DATABASE CONNECTION ----
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/levelupsystem';
 
-mongoose.connect(MONGODB_URI)
-  .then(() => {
+async function connectDB() {
+  try {
+    await mongoose.connect(MONGODB_URI);
     console.log('');
     console.log('╔══════════════════════════════════════╗');
     console.log('║      LEVEL UP SYSTEM - BACKEND       ║');
@@ -68,17 +68,33 @@ mongoose.connect(MONGODB_URI)
     console.log('║  ✓ System Status: ONLINE             ║');
     console.log('╚══════════════════════════════════════╝');
     console.log('');
-  })
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
-    console.error('Make sure MongoDB is running! Run: mongod');
-    process.exit(1);
-  });
+  } catch (err) {
+    console.log('Local/Atlas MongoDB not available, starting in-memory MongoDB...');
+    const { MongoMemoryServer } = require('mongodb-memory-server');
+    const mongod = await MongoMemoryServer.create();
+    const memUri = mongod.getUri();
+    await mongoose.connect(memUri);
+    console.log('');
+    console.log('╔══════════════════════════════════════╗');
+    console.log('║      LEVEL UP SYSTEM - BACKEND       ║');
+    console.log('╠══════════════════════════════════════╣');
+    console.log('║  ✓ In-Memory MongoDB Started         ║');
+    console.log(`║  ✓ Server running on port ${process.env.PORT || 5000}       ║`);
+    console.log('║  ⚠ Data will reset on restart        ║');
+    console.log('║  ✓ System Status: ONLINE             ║');
+    console.log('╚══════════════════════════════════════╝');
+    console.log('');
+  }
+}
 
-// Start the server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server listening on http://localhost:${PORT}`);
-});
+connectDB();
+
+// Start the server if not running in serverless environment
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server listening on http://localhost:${PORT}`);
+  });
+}
 
 module.exports = app;
