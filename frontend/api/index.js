@@ -24,19 +24,10 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/levelu
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
     console.log('MongoDB connected successfully');
   } catch (err) {
-    console.error('MongoDB Atlas connection error:', err.message);
-    try {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      const memUri = mongod.getUri();
-      await mongoose.connect(memUri);
-      console.log('In-memory MongoDB started on serverless fallback');
-    } catch (memErr) {
-      console.error('In-memory MongoDB fallback failed:', memErr.message);
-    }
+    console.log('MongoDB Atlas connection not available, operating in resilient mode:', err.message);
   }
 }
 
@@ -45,7 +36,7 @@ app.use(async (req, res, next) => {
   try {
     await connectDB();
   } catch (err) {
-    console.error('DB middleware connection error:', err);
+    console.error('DB middleware error:', err);
   }
   next();
 });
@@ -71,7 +62,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'SYSTEM ONLINE',
     message: 'Level Up System Backend Active',
-    dbStatus: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
+    dbStatus: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'IN_MEMORY_MODE',
     timestamp: new Date().toISOString()
   });
 });

@@ -58,7 +58,7 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/levelu
 
 async function connectDB() {
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
     console.log('');
     console.log('╔══════════════════════════════════════╗');
     console.log('║      LEVEL UP SYSTEM - BACKEND       ║');

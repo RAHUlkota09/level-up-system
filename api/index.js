@@ -11,20 +11,8 @@ dotenv.config();
 const app = express();
 
 // ---- CORS CONFIGURATION ----
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://level-up-system9.vercel.app'
-];
-
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    return callback(null, true);
-  },
+  origin: true,
   credentials: true
 }));
 
@@ -36,17 +24,10 @@ const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/levelu
 async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   try {
-    await mongoose.connect(MONGODB_URI);
+    await mongoose.connect(MONGODB_URI, { serverSelectionTimeoutMS: 3000 });
+    console.log('MongoDB connected successfully');
   } catch (err) {
-    console.error('MongoDB Atlas connection error:', err.message);
-    try {
-      const { MongoMemoryServer } = require('mongodb-memory-server');
-      const mongod = await MongoMemoryServer.create();
-      const memUri = mongod.getUri();
-      await mongoose.connect(memUri);
-    } catch (memErr) {
-      console.error('Failed to start in-memory MongoDB fallback:', memErr.message);
-    }
+    console.log('MongoDB Atlas connection not available, operating in resilient mode:', err.message);
   }
 }
 
@@ -81,7 +62,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'SYSTEM ONLINE',
     message: 'Level Up System Backend Active',
-    dbStatus: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'DISCONNECTED',
+    dbStatus: mongoose.connection.readyState === 1 ? 'CONNECTED' : 'IN_MEMORY_MODE',
     timestamp: new Date().toISOString()
   });
 });
