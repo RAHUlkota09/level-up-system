@@ -1,5 +1,5 @@
 // =============================================
-// VERCEL SERVERLESS ENTRY POINT
+// VERCEL SERVERLESS FUNCTION HANDLER
 // =============================================
 const express = require('express');
 const mongoose = require('mongoose');
@@ -10,21 +10,9 @@ dotenv.config();
 
 const app = express();
 
-// ---- CORS CONFIGURATION ----
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  'https://level-up-system9.vercel.app'
-];
-
+// ---- CORS ----
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1 || origin.endsWith('.vercel.app')) {
-      return callback(null, true);
-    }
-    return callback(null, true);
-  },
+  origin: true,
   credentials: true
 }));
 
@@ -37,6 +25,7 @@ async function connectDB() {
   if (mongoose.connection.readyState >= 1) return;
   try {
     await mongoose.connect(MONGODB_URI);
+    console.log('MongoDB connected successfully');
   } catch (err) {
     console.error('MongoDB Atlas connection error:', err.message);
     try {
@@ -44,29 +33,30 @@ async function connectDB() {
       const mongod = await MongoMemoryServer.create();
       const memUri = mongod.getUri();
       await mongoose.connect(memUri);
+      console.log('In-memory MongoDB started on serverless fallback');
     } catch (memErr) {
-      console.error('Failed to start in-memory MongoDB fallback:', memErr.message);
+      console.error('In-memory MongoDB fallback failed:', memErr.message);
     }
   }
 }
 
-// Ensure DB connection on each request
+// DB Middleware
 app.use(async (req, res, next) => {
   try {
     await connectDB();
   } catch (err) {
-    console.error('DB middleware error:', err);
+    console.error('DB middleware connection error:', err);
   }
   next();
 });
 
-// ---- ROUTES ----
+// Import backend routes
 const path = require('path');
 const fs = require('fs');
 
 let backendRoutesDir = path.join(__dirname, '../backend/routes');
 if (!fs.existsSync(backendRoutesDir)) {
-  backendRoutesDir = path.join(__dirname, '../frontend/backend/routes');
+  backendRoutesDir = path.join(__dirname, '../../backend/routes');
 }
 
 app.use('/api/auth', require(path.join(backendRoutesDir, 'auth')));
